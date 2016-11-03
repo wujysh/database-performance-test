@@ -1,7 +1,6 @@
 package cn.edu.fudan.cs.db.performance.test.codeforces.thread;
 
 import cn.edu.fudan.cs.db.performance.test.codeforces.DataProvider;
-import cn.edu.fudan.cs.db.performance.test.codeforces.entity.Member;
 import cn.edu.fudan.cs.db.performance.test.codeforces.entity.Submission;
 import cn.edu.fudan.cs.db.performance.test.util.ByteUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -37,31 +36,35 @@ public class PutSubmission implements Runnable {
                     continue;
                 }
 
-                System.out.print("Putting to HBase: " + submission.getId() + ": " + submission.getProblem().getContestId() + " " + submission.getProblem().getIndex() + " ... ");
+//                System.out.print("Putting to HBase: " + submission.getId() + ": " + submission.getProblem().getContestId() + " " + submission.getProblem().getIndex() + " ... ");
 
                 /**
                  * Table            codeforces:submission
                  *
-                 * Row key          {id}-{author.members.handle}-{problem.contestId}-{problem.index}-{relativeTimeSeconds}
+                 * Row key          {problem.contestId}-{relativeTimeSeconds}-{author.members.handle}
                  * Column Family 1  info
                  * Columns          programmingLanguage, verdict, testset, passedTestCount,
                  *                  timeConsumedMillis, memoryConsumedBytes,
                  *                  participantType, teamId, teamName, ghost, room, startTimeSeconds
+                 *                  id, problem.index
                  *
                  * Column Family 2  code
                  * Columns          code
                  */
                 StringBuilder stringBuilder = new StringBuilder();
-                for (int i = 0; i < 8-submission.getId().toString().length(); i++) {
+                for (int i = 0; i < 6-submission.getProblem().getContestId().toString().length(); i++) {
                     stringBuilder.append("0");
                 }
-                stringBuilder.append(submission.getId()).append("-");
-                for (Member member : submission.getAuthor().getMembers()) {
-                    stringBuilder.append(member.getHandle());
+                stringBuilder.append(submission.getProblem().getContestId()).append("-")
+                        .append(String.valueOf(submission.getRelativeTimeSeconds())).append("-");
+                if (submission.getAuthor().getMembers().isEmpty()) {
+                    stringBuilder.append(submission.getAuthor().getTeamName());
+                } else {
+                    for (int i = 0; i < submission.getAuthor().getMembers().size(); i++) {
+                        if (i > 0) stringBuilder.append("_");
+                        stringBuilder.append(submission.getAuthor().getMembers().get(i).getHandle());
+                    }
                 }
-                stringBuilder.append("-").append(submission.getProblem().getContestId())
-                        .append("-").append(submission.getProblem().getIndex())
-                        .append("-").append(String.valueOf(submission.getRelativeTimeSeconds()));
 
                 Put put = new Put(stringBuilder.toString().getBytes());
 
@@ -89,10 +92,14 @@ public class PutSubmission implements Runnable {
                     put.addColumn("info".getBytes(), "room".getBytes(), ByteUtil.toByteArray(submission.getAuthor().getRoom()));
                 if (submission.getAuthor().getStartTimeSeconds() != null)
                     put.addColumn("info".getBytes(), "startTimeSeconds".getBytes(), ByteUtil.toByteArray(submission.getAuthor().getStartTimeSeconds()));
+                if (submission.getId() != null)
+                    put.addColumn("info".getBytes(), "id".getBytes(), ByteUtil.toByteArray(submission.getId()));
+                if (submission.getProblem().getIndex() != null)
+                    put.addColumn("info".getBytes(), "index".getBytes(), ByteUtil.toByteArray(submission.getProblem().getIndex()));
 
                 table.put(put);
 
-                System.out.println("Done.");
+//                System.out.println("Done.");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (IOException e) {
