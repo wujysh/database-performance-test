@@ -4,6 +4,8 @@ package cn.edu.fudan.cs.db.performance.test.codeforces.entity;
  * Created by wujy on 16-1-16.
  */
 
+import cn.edu.fudan.cs.db.performance.test.util.StringUtil;
+
 import java.util.List;
 
 /**
@@ -36,6 +38,14 @@ public class Problem {
 
     public Integer getContestId() {
         return contestId;
+    }
+
+    public String getContestIdWithPaddingZero() {
+        return getContestIdWithPaddingZero(6);
+    }
+
+    public String getContestIdWithPaddingZero(int numOfPadding) {
+        return StringUtil.numWithPadding(contestId, 6);
     }
 
     public void setContestId(Integer contestId) {

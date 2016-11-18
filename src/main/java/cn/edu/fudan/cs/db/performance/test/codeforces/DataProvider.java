@@ -10,6 +10,6 @@ import java.util.concurrent.LinkedBlockingDeque;
  */
 public class DataProvider {
 
-    public static BlockingQueue<Submission> unPutSubmissionQueue = new LinkedBlockingDeque<Submission>();
+    public static BlockingQueue<Submission> unPutSubmissionQueue = new LinkedBlockingDeque<>();
 
 }

@@ -3,12 +3,15 @@ package cn.edu.fudan.cs.db.performance.test.codeforces.thread;
 import cn.edu.fudan.cs.db.performance.test.codeforces.DataProvider;
 import cn.edu.fudan.cs.db.performance.test.codeforces.entity.Submission;
 import cn.edu.fudan.cs.db.performance.test.util.ByteUtil;
+import cn.edu.fudan.cs.db.performance.test.util.StringUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by wujy on 16-1-18.
@@ -16,10 +19,12 @@ import java.io.IOException;
 public class PutSubmission implements Runnable {
 
     private Table table = null;
+    private List<Put> unPutList = new ArrayList<>();
 
     public PutSubmission(Connection conn) {
         try {
             table = conn.getTable(TableName.valueOf("codeforces:submission"));
+            unPutList.clear();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -31,32 +36,39 @@ public class PutSubmission implements Runnable {
         while (true) {
             try {
                 Submission submission = DataProvider.unPutSubmissionQueue.take();
+                if (unPutList.size() > 100000 || null == submission) {
+                    table.put(unPutList);
+                    unPutList.clear();
+                }
                 if (null == submission) {
+                    System.out.println("Done.");
                     Thread.sleep(100);
                     continue;
                 }
 
 //                System.out.print("Putting to HBase: " + submission.getId() + ": " + submission.getProblem().getContestId() + " " + submission.getProblem().getIndex() + " ... ");
 
-                /**
+                /*
                  * Table            codeforces:submission
                  *
-                 * Row key          {problem.contestId}-{relativeTimeSeconds}-{author.members.handle}
-                 * Column Family 1  info
-                 * Columns          programmingLanguage, verdict, testset, passedTestCount,
-                 *                  timeConsumedMillis, memoryConsumedBytes,
-                 *                  participantType, teamId, teamName, ghost, room, startTimeSeconds
-                 *                  id, problem.index
+                 * Row key          {problem.contestId}(padding)-{relativeTimeSeconds}(padding)-{problem.index}-{author.members.handle}
                  *
-                 * Column Family 2  code
+                 * Column Family 1  verdict
+                 *                  verdict
+                 *
+                 * Column Family 2  info
+                 * Columns          id, creationTimeSeconds,
+                 *                  participantType, teamId, teamName, ghost, room, startTimeSeconds,
+                 *                  programmingLanguage, testset, passedTestCount,
+                 *                  timeConsumedMillis, memoryConsumedBytes
+                 *
+                 * Column Family 3  code
                  * Columns          code
                  */
                 StringBuilder stringBuilder = new StringBuilder();
-                for (int i = 0; i < 6-submission.getProblem().getContestId().toString().length(); i++) {
-                    stringBuilder.append("0");
-                }
-                stringBuilder.append(submission.getProblem().getContestId()).append("-")
-                        .append(String.valueOf(submission.getRelativeTimeSeconds())).append("-");
+                stringBuilder.append(submission.getProblem().getContestIdWithPaddingZero()).append("-")
+                        .append(StringUtil.numWithPadding(submission.getRelativeTimeSeconds(), 10)).append("-")
+                        .append(submission.getProblem().getIndex()).append("-");
                 if (submission.getAuthor().getMembers().isEmpty()) {
                     stringBuilder.append(submission.getAuthor().getTeamName());
                 } else {
@@ -68,18 +80,13 @@ public class PutSubmission implements Runnable {
 
                 Put put = new Put(stringBuilder.toString().getBytes());
 
-                if (submission.getProgrammingLanguage() != null)
-                    put.addColumn("info".getBytes(), "programmingLanguage".getBytes(), ByteUtil.toByteArray(submission.getProgrammingLanguage()));
                 if (submission.getVerdict() != null)
-                    put.addColumn("info".getBytes(), "verdict".getBytes(), ByteUtil.toByteArray(submission.getVerdict()));
-                if (submission.getTestset() != null)
-                    put.addColumn("info".getBytes(), "testset".getBytes(), ByteUtil.toByteArray(submission.getTestset()));
-                if (submission.getPassedTestCount() != null)
-                    put.addColumn("info".getBytes(), "passedTestCount".getBytes(), ByteUtil.toByteArray(submission.getPassedTestCount()));
-                if (submission.getTimeConsumedMillis() != null)
-                    put.addColumn("info".getBytes(), "timeConsumedMillis".getBytes(), ByteUtil.toByteArray(submission.getTimeConsumedMillis()));
-                if (submission.getMemoryConsumedBytes() != null)
-                    put.addColumn("info".getBytes(), "memoryConsumedBytes".getBytes(), ByteUtil.toByteArray(submission.getMemoryConsumedBytes()));
+                    put.addColumn("verdict".getBytes(), "verdict".getBytes(), ByteUtil.toByteArray(submission.getVerdict()));
+
+                if (submission.getId() != null)
+                    put.addColumn("info".getBytes(), "id".getBytes(), ByteUtil.toByteArray(submission.getId()));
+                if (submission.getCreationTimeSeconds() != null)
+                    put.addColumn("info".getBytes(), "creationTimeSeconds".getBytes(), ByteUtil.toByteArray(submission.getCreationTimeSeconds()));
                 if (submission.getAuthor().getParticipantType() != null)
                     put.addColumn("info".getBytes(), "participantType".getBytes(), ByteUtil.toByteArray(submission.getAuthor().getParticipantType()));
                 if (submission.getAuthor().getTeamId() != null)
@@ -92,17 +99,19 @@ public class PutSubmission implements Runnable {
                     put.addColumn("info".getBytes(), "room".getBytes(), ByteUtil.toByteArray(submission.getAuthor().getRoom()));
                 if (submission.getAuthor().getStartTimeSeconds() != null)
                     put.addColumn("info".getBytes(), "startTimeSeconds".getBytes(), ByteUtil.toByteArray(submission.getAuthor().getStartTimeSeconds()));
-                if (submission.getId() != null)
-                    put.addColumn("info".getBytes(), "id".getBytes(), ByteUtil.toByteArray(submission.getId()));
-                if (submission.getProblem().getIndex() != null)
-                    put.addColumn("info".getBytes(), "index".getBytes(), ByteUtil.toByteArray(submission.getProblem().getIndex()));
+                if (submission.getProgrammingLanguage() != null)
+                    put.addColumn("info".getBytes(), "programmingLanguage".getBytes(), ByteUtil.toByteArray(submission.getProgrammingLanguage()));
+                if (submission.getTestset() != null)
+                    put.addColumn("info".getBytes(), "testset".getBytes(), ByteUtil.toByteArray(submission.getTestset()));
+                if (submission.getPassedTestCount() != null)
+                    put.addColumn("info".getBytes(), "passedTestCount".getBytes(), ByteUtil.toByteArray(submission.getPassedTestCount()));
+                if (submission.getTimeConsumedMillis() != null)
+                    put.addColumn("info".getBytes(), "timeConsumedMillis".getBytes(), ByteUtil.toByteArray(submission.getTimeConsumedMillis()));
+                if (submission.getMemoryConsumedBytes() != null)
+                    put.addColumn("info".getBytes(), "memoryConsumedBytes".getBytes(), ByteUtil.toByteArray(submission.getMemoryConsumedBytes()));
 
-                table.put(put);
-
-//                System.out.println("Done.");
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
+                unPutList.add(put);
+            } catch (InterruptedException | IOException e) {
                 e.printStackTrace();
             }
         }
