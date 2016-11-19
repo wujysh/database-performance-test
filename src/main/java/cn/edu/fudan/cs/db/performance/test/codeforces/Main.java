@@ -127,13 +127,13 @@ public class Main {
             /*
              * Table            codeforces:submission
              *
-             * Row key          {problem.contestId}(padding)-{relativeTimeSeconds}(padding)-{problem.index}-{author.members.handle}
+             * Row key          {problem.contestId}(padding)-{relativeTimeSeconds}(padding)-{problem.index}-{author.members.handle}-{id}
              *
              * Column Family 1  verdict
              *                  verdict
              *
              * Column Family 2  info
-             * Columns          id, creationTimeSeconds,
+             * Columns          creationTimeSeconds,
              *                  participantType, teamId, teamName, ghost, room, startTimeSeconds,
              *                  programmingLanguage, testset, passedTestCount,
              *                  timeConsumedMillis, memoryConsumedBytes

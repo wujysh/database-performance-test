@@ -56,13 +56,13 @@ public class PutSubmission implements Runnable {
                 /*
                  * Table            codeforces:submission
                  *
-                 * Row key          {problem.contestId}(padding)-{relativeTimeSeconds}(padding)-{problem.index}-{author.members.handle}
+                 * Row key          {problem.contestId}(padding)-{relativeTimeSeconds}(padding)-{problem.index}-{author.members.handle}-{id}
                  *
                  * Column Family 1  verdict
                  *                  verdict
                  *
                  * Column Family 2  info
-                 * Columns          id, creationTimeSeconds,
+                 * Columns          creationTimeSeconds,
                  *                  participantType, teamId, teamName, ghost, room, startTimeSeconds,
                  *                  programmingLanguage, testset, passedTestCount,
                  *                  timeConsumedMillis, memoryConsumedBytes
@@ -82,14 +82,13 @@ public class PutSubmission implements Runnable {
                         stringBuilder.append(submission.getAuthor().getMembers().get(i).getHandle());
                     }
                 }
+                stringBuilder.append("-").append(submission.getId());
 
                 Put put = new Put(Bytes.toBytes(stringBuilder.toString()));
 
                 if (submission.getVerdict() != null)
                     put.addColumn(Bytes.toBytes("verdict"), Bytes.toBytes("verdict"), Bytes.toBytes(String.valueOf(submission.getVerdict())));
 
-                if (submission.getId() != null)
-                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("id"), Bytes.toBytes(submission.getId()));
                 if (submission.getCreationTimeSeconds() != null)
                     put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("creationTimeSeconds"), Bytes.toBytes(submission.getCreationTimeSeconds()));
                 if (submission.getAuthor().getParticipantType() != null)
