@@ -2,12 +2,14 @@ package cn.edu.fudan.cs.db.performance.test.codeforces.thread;
 
 import cn.edu.fudan.cs.db.performance.test.codeforces.DataProvider;
 import cn.edu.fudan.cs.db.performance.test.codeforces.entity.Submission;
-import cn.edu.fudan.cs.db.performance.test.util.ByteUtil;
 import cn.edu.fudan.cs.db.performance.test.util.StringUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,15 +20,18 @@ import java.util.List;
  */
 public class PutSubmission implements Runnable {
 
+    private static final Logger logger = LoggerFactory.getLogger(PutSubmission.class.getName());
+
     private Table table = null;
-    private List<Put> unPutList = new ArrayList<>();
+
+    private List<Put> pendingPutCache = new ArrayList<>();
 
     public PutSubmission(Connection conn) {
         try {
             table = conn.getTable(TableName.valueOf("codeforces:submission"));
-            unPutList.clear();
+            pendingPutCache.clear();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e.getCause());
         }
     }
 
@@ -36,9 +41,9 @@ public class PutSubmission implements Runnable {
         while (true) {
             try {
                 Submission submission = DataProvider.unPutSubmissionQueue.take();
-                if (unPutList.size() > 100000 || null == submission) {
-                    table.put(unPutList);
-                    unPutList.clear();
+                if (pendingPutCache.size() > 100000 || null == submission) {
+                    table.put(pendingPutCache);
+                    pendingPutCache.clear();
                 }
                 if (null == submission) {
                     System.out.println("Done.");
@@ -78,41 +83,41 @@ public class PutSubmission implements Runnable {
                     }
                 }
 
-                Put put = new Put(stringBuilder.toString().getBytes());
+                Put put = new Put(Bytes.toBytes(stringBuilder.toString()));
 
                 if (submission.getVerdict() != null)
-                    put.addColumn("verdict".getBytes(), "verdict".getBytes(), ByteUtil.toByteArray(submission.getVerdict()));
+                    put.addColumn(Bytes.toBytes("verdict"), Bytes.toBytes("verdict"), Bytes.toBytes(String.valueOf(submission.getVerdict())));
 
                 if (submission.getId() != null)
-                    put.addColumn("info".getBytes(), "id".getBytes(), ByteUtil.toByteArray(submission.getId()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("id"), Bytes.toBytes(submission.getId()));
                 if (submission.getCreationTimeSeconds() != null)
-                    put.addColumn("info".getBytes(), "creationTimeSeconds".getBytes(), ByteUtil.toByteArray(submission.getCreationTimeSeconds()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("creationTimeSeconds"), Bytes.toBytes(submission.getCreationTimeSeconds()));
                 if (submission.getAuthor().getParticipantType() != null)
-                    put.addColumn("info".getBytes(), "participantType".getBytes(), ByteUtil.toByteArray(submission.getAuthor().getParticipantType()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("participantType"), Bytes.toBytes(String.valueOf(submission.getAuthor().getParticipantType())));
                 if (submission.getAuthor().getTeamId() != null)
-                    put.addColumn("info".getBytes(), "teamId".getBytes(), ByteUtil.toByteArray(submission.getAuthor().getTeamId()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("teamId"), Bytes.toBytes(submission.getAuthor().getTeamId()));
                 if (submission.getAuthor().getTeamName() != null)
-                    put.addColumn("info".getBytes(), "teamName".getBytes(), ByteUtil.toByteArray(submission.getAuthor().getTeamName()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("teamName"), Bytes.toBytes(submission.getAuthor().getTeamName()));
                 if (submission.getAuthor().getGhost() != null)
-                    put.addColumn("info".getBytes(), "ghost".getBytes(), ByteUtil.toByteArray(submission.getAuthor().getGhost()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("ghost"), Bytes.toBytes(submission.getAuthor().getGhost()));
                 if (submission.getAuthor().getRoom() != null)
-                    put.addColumn("info".getBytes(), "room".getBytes(), ByteUtil.toByteArray(submission.getAuthor().getRoom()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("room"), Bytes.toBytes(submission.getAuthor().getRoom()));
                 if (submission.getAuthor().getStartTimeSeconds() != null)
-                    put.addColumn("info".getBytes(), "startTimeSeconds".getBytes(), ByteUtil.toByteArray(submission.getAuthor().getStartTimeSeconds()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("startTimeSeconds"), Bytes.toBytes(submission.getAuthor().getStartTimeSeconds()));
                 if (submission.getProgrammingLanguage() != null)
-                    put.addColumn("info".getBytes(), "programmingLanguage".getBytes(), ByteUtil.toByteArray(submission.getProgrammingLanguage()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("programmingLanguage"), Bytes.toBytes(submission.getProgrammingLanguage()));
                 if (submission.getTestset() != null)
-                    put.addColumn("info".getBytes(), "testset".getBytes(), ByteUtil.toByteArray(submission.getTestset()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("testset"), Bytes.toBytes(String.valueOf(submission.getTestset())));
                 if (submission.getPassedTestCount() != null)
-                    put.addColumn("info".getBytes(), "passedTestCount".getBytes(), ByteUtil.toByteArray(submission.getPassedTestCount()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("passedTestCount"), Bytes.toBytes(submission.getPassedTestCount()));
                 if (submission.getTimeConsumedMillis() != null)
-                    put.addColumn("info".getBytes(), "timeConsumedMillis".getBytes(), ByteUtil.toByteArray(submission.getTimeConsumedMillis()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("timeConsumedMillis"), Bytes.toBytes(submission.getTimeConsumedMillis()));
                 if (submission.getMemoryConsumedBytes() != null)
-                    put.addColumn("info".getBytes(), "memoryConsumedBytes".getBytes(), ByteUtil.toByteArray(submission.getMemoryConsumedBytes()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("memoryConsumedBytes"), Bytes.toBytes(submission.getMemoryConsumedBytes()));
 
-                unPutList.add(put);
+                pendingPutCache.add(put);
             } catch (InterruptedException | IOException e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e.getCause());
             }
         }
     }

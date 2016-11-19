@@ -22,7 +22,7 @@ public class ProblemResult {
 
     private Integer rejectedAttemptCount;
 
-    private enum Type {
+    public enum Type {
         PRELIMINARY, FINAL
     }
     private Type type;

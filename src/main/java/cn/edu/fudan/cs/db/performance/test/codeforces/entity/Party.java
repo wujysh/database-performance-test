@@ -4,6 +4,8 @@ package cn.edu.fudan.cs.db.performance.test.codeforces.entity;
  * Created by wujy on 16-1-16.
  */
 
+import cn.edu.fudan.cs.db.performance.test.codeforces.entity.enums.ParticipantType;
+
 import java.util.List;
 
 /**
@@ -25,9 +27,6 @@ public class Party {
 
     private List<Member> members;
 
-    private enum ParticipantType {
-        CONTESTANT, PRACTICE, VIRTUAL, MANAGER, OUT_OF_COMPETITION
-    }
     private ParticipantType participantType;
 
     private Integer teamId;

@@ -12,11 +12,11 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +32,8 @@ public class Main {
     private static Gson gson = new Gson();
 
     private static String BASE_DATA_DIR = "data" + File.separator;
+
+    private static long cntSubmissions;
 
     public static void initHBase() throws IOException {
         Admin admin = null;
@@ -155,7 +157,7 @@ public class Main {
 
             admin.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e.getCause());
         } finally {
             if (admin != null) {
                 admin.close();
@@ -188,24 +190,24 @@ public class Main {
                  * Column Family 2  rating
                  * Columns          rating, maxRating
                  */
-                Put put = new Put(user.getHandle().getBytes());
+                Put put = new Put(Bytes.toBytes(user.getHandle()));
 
-                if (user.getEmail() != null) put.addColumn("info".getBytes(), "email".getBytes(), ByteUtil.toByteArray(user.getEmail()));
-                if (user.getVkId() != null) put.addColumn("info".getBytes(), "vkId".getBytes(), ByteUtil.toByteArray(user.getVkId()));
-                if (user.getOpenId() != null) put.addColumn("info".getBytes(), "openId".getBytes(), ByteUtil.toByteArray(user.getOpenId()));
-                if (user.getFirstName() != null) put.addColumn("info".getBytes(), "firstName".getBytes(), ByteUtil.toByteArray(user.getFirstName()));
-                if (user.getLastName() != null) put.addColumn("info".getBytes(), "lastName".getBytes(), ByteUtil.toByteArray(user.getLastName()));
-                if (user.getCountry() != null) put.addColumn("info".getBytes(), "country".getBytes(), ByteUtil.toByteArray(user.getCountry()));
-                if (user.getCity() != null) put.addColumn("info".getBytes(), "city".getBytes(), ByteUtil.toByteArray(user.getCity()));
-                if (user.getOrganization() != null) put.addColumn("info".getBytes(), "organization".getBytes(), ByteUtil.toByteArray(user.getOrganization()));
-                if (user.getContribution() != null) put.addColumn("info".getBytes(), "contribution".getBytes(), ByteUtil.toByteArray(user.getContribution()));
-                if (user.getLastOnlineTimeSeconds() != null) put.addColumn("info".getBytes(), "lastOnlineTimeSeconds".getBytes(), ByteUtil.toByteArray(user.getLastOnlineTimeSeconds()));
-                if (user.getRegistrationTimeSeconds() != null) put.addColumn("info".getBytes(), "registrationTimeSeconds".getBytes(), ByteUtil.toByteArray(user.getRegistrationTimeSeconds()));
-                if (user.getRank() != null) put.addColumn("info".getBytes(), "rank".getBytes(), ByteUtil.toByteArray(user.getRank()));
-                if (user.getMaxRank() != null) put.addColumn("info".getBytes(), "maxRank".getBytes(), ByteUtil.toByteArray(user.getMaxRank()));
+                if (user.getEmail() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("email"), Bytes.toBytes(user.getEmail()));
+                if (user.getVkId() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("vkId"), Bytes.toBytes(user.getVkId()));
+                if (user.getOpenId() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("openId"), Bytes.toBytes(user.getOpenId()));
+                if (user.getFirstName() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("firstName"), Bytes.toBytes(user.getFirstName()));
+                if (user.getLastName() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("lastName"), Bytes.toBytes(user.getLastName()));
+                if (user.getCountry() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("country"), Bytes.toBytes(user.getCountry()));
+                if (user.getCity() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("city"), Bytes.toBytes(user.getCity()));
+                if (user.getOrganization() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("organization"), Bytes.toBytes(user.getOrganization()));
+                if (user.getContribution() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("contribution"), Bytes.toBytes(user.getContribution()));
+                if (user.getLastOnlineTimeSeconds() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("lastOnlineTimeSeconds"), Bytes.toBytes(user.getLastOnlineTimeSeconds()));
+                if (user.getRegistrationTimeSeconds() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("registrationTimeSeconds"), Bytes.toBytes(user.getRegistrationTimeSeconds()));
+                if (user.getRank() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("rank"), Bytes.toBytes(user.getRank()));
+                if (user.getMaxRank() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("maxRank"), Bytes.toBytes(user.getMaxRank()));
 
-                if (user.getRating() != null) put.addColumn("rating".getBytes(), "rating".getBytes(), ByteUtil.toByteArray(user.getRating()));
-                if (user.getMaxRating() != null) put.addColumn("rating".getBytes(), "maxRating".getBytes(), ByteUtil.toByteArray(user.getMaxRating()));
+                if (user.getRating() != null) put.addColumn(Bytes.toBytes("rating"), Bytes.toBytes("rating"), Bytes.toBytes(user.getRating()));
+                if (user.getMaxRating() != null) put.addColumn(Bytes.toBytes("rating"), Bytes.toBytes("maxRating"), Bytes.toBytes(user.getMaxRating()));
 
                 putList.add(put);
                 //fetchUserSubmissions(user.getHandle());
@@ -215,12 +217,8 @@ public class Main {
             table.put(putList);
             long endTime = System.currentTimeMillis();
             logger.info("Putting {} users into HBase costs {} ms.", users.size(), endTime - startTime);
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e.getCause());
         } finally {
             if (table != null) {
                 table.close();
@@ -255,12 +253,12 @@ public class Main {
                  * Columns          content, timeLimit, memoryLimit, ...
                  */
 
-                Put put = new Put((problem.getContestIdWithPaddingZero() + "-" + problem.getIndex()).getBytes());
+                Put put = new Put(Bytes.toBytes(problem.getContestIdWithPaddingZero() + "-" + problem.getIndex()));
 
-                if (problem.getName() != null) put.addColumn("info".getBytes(), "name".getBytes(), ByteUtil.toByteArray(problem.getName()));
-                if (problem.getType() != null) put.addColumn("info".getBytes(), "type".getBytes(), ByteUtil.toByteArray(problem.getType()));
-                if (problem.getPoints() != null) put.addColumn("info".getBytes(), "points".getBytes(), ByteUtil.toByteArray(problem.getPoints()));
-                if (problem.getTags() != null) put.addColumn("info".getBytes(), "tags".getBytes(), ByteUtil.toByteArray(problem.getTags()));
+                if (problem.getName() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("name"), Bytes.toBytes(problem.getName()));
+                if (problem.getType() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("type"), Bytes.toBytes(String.valueOf(problem.getType())));
+                if (problem.getPoints() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("points"), Bytes.toBytes(problem.getPoints()));
+                if (problem.getTags() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("tags"), ByteUtil.toByteArray(problem.getTags()));
 
                 putList.add(put);
             }
@@ -273,9 +271,9 @@ public class Main {
             for (ProblemStatistics problemStatistics : result.getProblemStatistics()) {
                 System.out.println("Put to HBase: " + problemStatistics.getContestId() + "-" + problemStatistics.getIndex() + ": " + problemStatistics.getSolvedCount());
 
-                Put put = new Put((problemStatistics.getContestIdWithPaddingZero() + "-" + problemStatistics.getIndex()).getBytes());
+                Put put = new Put(Bytes.toBytes(problemStatistics.getContestIdWithPaddingZero() + "-" + problemStatistics.getIndex()));
 
-                if (problemStatistics.getSolvedCount() != null) put.addColumn("info".getBytes(), "solvedCount".getBytes(), ByteUtil.toByteArray(problemStatistics.getSolvedCount()));
+                if (problemStatistics.getSolvedCount() != null) put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("solvedCount"), Bytes.toBytes(problemStatistics.getSolvedCount()));
 
                 putList.add(put);
             }
@@ -284,12 +282,8 @@ public class Main {
             endTime = System.currentTimeMillis();
             logger.info("Putting {} problem statistics into HBase costs {} ms.", result.getProblemStatistics().size(), endTime - startTime);
 
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e.getCause());
         } finally {
             if (table != null) {
                 table.close();
@@ -327,40 +321,40 @@ public class Main {
                  * Columns          preparedBy, websiteUrl, description,
                  *                  difficulty, kind, icpcRegion, city, season
                  */
-                Put put = new Put(contest.getIdWithPaddingZero().getBytes());
+                Put put = new Put(Bytes.toBytes(contest.getIdWithPaddingZero()));
 
                 if (contest.getName() != null)
-                    put.addColumn("info".getBytes(), "name".getBytes(), ByteUtil.toByteArray(contest.getName()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("name"), Bytes.toBytes(contest.getName()));
                 if (contest.getType() != null)
-                    put.addColumn("info".getBytes(), "type".getBytes(), ByteUtil.toByteArray(contest.getType()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("type"), Bytes.toBytes(String.valueOf(contest.getType())));
                 if (contest.getPhase() != null)
-                    put.addColumn("info".getBytes(), "phase".getBytes(), ByteUtil.toByteArray(contest.getPhase()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("phase"), Bytes.toBytes(String.valueOf(contest.getPhase())));
                 if (contest.getFrozen() != null)
-                    put.addColumn("info".getBytes(), "frozen".getBytes(), ByteUtil.toByteArray(contest.getFrozen()));
+                    put.addColumn(Bytes.toBytes("info"), Bytes.toBytes("frozen"), Bytes.toBytes(contest.getFrozen()));
 
                 if (contest.getStartTimeSeconds() != null)
-                    put.addColumn("time".getBytes(), "startTimeSeconds".getBytes(), ByteUtil.toByteArray(contest.getStartTimeSeconds()));
+                    put.addColumn(Bytes.toBytes("time"), Bytes.toBytes("startTimeSeconds"), Bytes.toBytes(contest.getStartTimeSeconds()));
                 if (contest.getDurationSeconds() != null)
-                    put.addColumn("time".getBytes(), "durationSeconds".getBytes(), ByteUtil.toByteArray(contest.getDurationSeconds()));
+                    put.addColumn(Bytes.toBytes("time"), Bytes.toBytes("durationSeconds"), Bytes.toBytes(contest.getDurationSeconds()));
                 if (contest.getRelativeTimeSeconds() != null)
-                    put.addColumn("time".getBytes(), "relativeTimeSeconds".getBytes(), ByteUtil.toByteArray(contest.getRelativeTimeSeconds()));
+                    put.addColumn(Bytes.toBytes("time"), Bytes.toBytes("relativeTimeSeconds"), Bytes.toBytes(contest.getRelativeTimeSeconds()));
 
                 if (contest.getPreparedBy() != null)
-                    put.addColumn("other".getBytes(), "preparedBy".getBytes(), ByteUtil.toByteArray(contest.getPreparedBy()));
+                    put.addColumn(Bytes.toBytes("other"), Bytes.toBytes("preparedBy"), Bytes.toBytes(contest.getPreparedBy()));
                 if (contest.getWebsiteUrl() != null)
-                    put.addColumn("other".getBytes(), "websiteUrl".getBytes(), ByteUtil.toByteArray(contest.getWebsiteUrl()));
+                    put.addColumn(Bytes.toBytes("other"), Bytes.toBytes("websiteUrl"), Bytes.toBytes(contest.getWebsiteUrl()));
                 if (contest.getDescription() != null)
-                    put.addColumn("other".getBytes(), "description".getBytes(), ByteUtil.toByteArray(contest.getDescription()));
+                    put.addColumn(Bytes.toBytes("other"), Bytes.toBytes("description"), Bytes.toBytes(contest.getDescription()));
                 if (contest.getDifficulty() != null)
-                    put.addColumn("other".getBytes(), "difficulty".getBytes(), ByteUtil.toByteArray(contest.getDifficulty()));
+                    put.addColumn(Bytes.toBytes("other"), Bytes.toBytes("difficulty"), Bytes.toBytes(contest.getDifficulty()));
                 if (contest.getKind() != null)
-                    put.addColumn("other".getBytes(), "kind".getBytes(), ByteUtil.toByteArray(contest.getKind()));
+                    put.addColumn(Bytes.toBytes("other"), Bytes.toBytes("kind"), Bytes.toBytes(contest.getKind()));
                 if (contest.getIcpcRegion() != null)
-                    put.addColumn("other".getBytes(), "icpcRegion".getBytes(), ByteUtil.toByteArray(contest.getIcpcRegion()));
+                    put.addColumn(Bytes.toBytes("other"), Bytes.toBytes("icpcRegion"), Bytes.toBytes(contest.getIcpcRegion()));
                 if (contest.getCity() != null)
-                    put.addColumn("other".getBytes(), "city".getBytes(), ByteUtil.toByteArray(contest.getCity()));
+                    put.addColumn(Bytes.toBytes("other"), Bytes.toBytes("city"), Bytes.toBytes(contest.getCity()));
                 if (contest.getSeason() != null)
-                    put.addColumn("other".getBytes(), "season".getBytes(), ByteUtil.toByteArray(contest.getSeason()));
+                    put.addColumn(Bytes.toBytes("other"), Bytes.toBytes("season"), Bytes.toBytes(contest.getSeason()));
 
                 putList.add(put);
             }
@@ -370,6 +364,8 @@ public class Main {
             long endTime = System.currentTimeMillis();
             logger.info("Putting {} contests into HBase costs {} ms.", contests.size(), endTime - startTime);
 
+            cntSubmissions = 0;
+            startTime = System.currentTimeMillis();
             for (Contest contest : contests) {
                 System.out.println("Put to HBase: " + contest.getId() + ": " + contest.getName() + " " + contest.getStartTimeSeconds());
 
@@ -377,12 +373,11 @@ public class Main {
                     fetchContestSubmission(contest.getId());
                 }
             }
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
+            endTime = System.currentTimeMillis();
+            logger.info("Putting {} submissions into HBase costs {} ms.", cntSubmissions, endTime - startTime);
+
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e.getCause());
         } finally {
             if (table != null) {
                 table.close();
@@ -402,7 +397,7 @@ public class Main {
                     submissionResponse = gson.fromJson(reader, SubmissionResponse.class);
                     done = true;
                 } catch (JsonSyntaxException e) {
-                    System.out.println("MalformedJsonException!, retrying ...");
+                    logger.warn("MalformedJsonException!, retrying ...");
                     Thread.sleep(2000);
                     FileUtil.downloadURL("http://codeforces.com/api/contest.status?contestId=" + id, filename, true);
                 }
@@ -411,11 +406,10 @@ public class Main {
                 System.out.println("Waiting: " + DataProvider.unPutSubmissionQueue.size());
                 Thread.sleep(2000);
             }
+            cntSubmissions += submissionResponse.getResult().size();
             DataProvider.unPutSubmissionQueue.addAll(submissionResponse.getResult());
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } catch (IOException | InterruptedException e) {
+            logger.error(e.getMessage(), e.getCause());
         }
     }
 
@@ -427,7 +421,7 @@ public class Main {
             SubmissionResponse submissionResponse = gson.fromJson(reader, SubmissionResponse.class);
             DataProvider.unPutSubmissionQueue.addAll(submissionResponse.getResult());
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e.getCause());
         }
     }
 
@@ -436,14 +430,13 @@ public class Main {
 
         initHBase();
 
-        new Thread(new PutSubmission(conn)).start();
+        fetchUsers();
 
         fetchProblems();
 
+        new Thread(new PutSubmission(conn)).start();
         fetchContest(true);  // gym contests
         fetchContest(false);  // regular contests
-
-        fetchUsers();
     }
 
     private static void initFilesystem() {
